@@ -6,7 +6,6 @@
 
 set -e
 
-SNIP_VERSION="0.0.5"
 SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_BIN="${SNIP_DIR}/snip.sh"
@@ -122,7 +121,7 @@ step_wire_rc() {
 # ── main ──────────────────────────────────────
 
 _nl
-_bold "  Installing snip v${SNIP_VERSION}..."
+_bold "  Installing snip..."
 _nl
 
 SNIP_SHELL=$(detect_shell)
@@ -135,7 +134,9 @@ step_add_to_path
 step_wire_rc "${SNIP_SHELL}"
 
 _nl
-_bold "  ✓ snip installed!"
+local installed_version
+installed_version=$(grep '^SNIP_VERSION=' "${SNIP_BIN}" | head -1 | sed 's/SNIP_VERSION="//;s/"//')
+_bold "  ✓ snip v${installed_version} installed!"
 _nl
 _dim "  Snips file : ${SNIP_DIR}/snips.${SNIP_SHELL}"
 _dim "  Binary     : ${LOCAL_BIN}/snip"
