@@ -4,7 +4,7 @@
 #  https://github.com/armedjuror/snip
 # ─────────────────────────────────────────────
 
-SNIP_VERSION="0.0.3"
+SNIP_VERSION="0.0.4"
 SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_SHELL_FILE="${SNIP_DIR}/.shell"
@@ -119,9 +119,10 @@ cmd_help() {
   printf "    snip <command> [name]\n"
   _nl
   printf "  ${BOLD}COMMANDS${RESET}\n"
-  printf "    ${CYAN}add${RESET} <name>       Create a new snip (opens \$EDITOR)\n"
-  printf "    ${CYAN}rename${RESET} <name> <new>  Rename a snip\n"
-  printf "    ${CYAN}remove${RESET} <name>        Delete a snip\n"
+  printf "    ${CYAN}add${RESET} <name>            Create a new snip (opens \$EDITOR)\n"
+  printf "    ${CYAN}edit${RESET} <name>           Edit an existing snip\n"
+  printf "    ${CYAN}rename${RESET} <name> <new>   Rename a snip\n"
+  printf "    ${CYAN}remove${RESET} <name>         Delete a snip\n"
   printf "    ${CYAN}list${RESET}             List all snips\n"
   printf "    ${CYAN}upgrade${RESET}          Upgrade snip to the latest version\n"
   printf "    ${CYAN}version${RESET}          Show installed version\n"
@@ -292,6 +293,58 @@ cmd_rename() {
   _reload_hint
 }
 
+cmd_edit() {
+  local name="$1"
+
+  if [ -z "${name}" ]; then
+    _err "Usage: snip edit <name>"
+    return 1
+  fi
+
+  _ensure_files
+
+  if ! _exists "${name}"; then
+    _err "No snip named '${name}' found. Use 'snip add ${name}' to create it."
+    return 1
+  fi
+
+  # Pre-populate temp file with the existing body
+  local tmpfile body
+  tmpfile="$(mktemp /tmp/snip_XXXXXX.sh)"
+  body="$(_get_function "${name}" | tail -n +2 | awk 'NR>1{print prev} {prev=$0}')"
+
+  cat > "${tmpfile}" <<TEMPLATE
+# snip: ${name}
+# Edit the command(s) below. Lines starting with # are ignored.
+#
+# Argument tips:
+#   \$1, \$2 …  positional args  →  pip install \$1
+#   "\$@"       forward all args →  git pull "\$@"
+#
+${body}
+TEMPLATE
+
+  local editor
+  editor="$(_editor)"
+  "${editor}" "${tmpfile}"
+
+  # Strip comments and blank lines
+  local newbody
+  newbody="$(grep -v '^\s*#' "${tmpfile}" | sed '/^[[:space:]]*$/d')"
+  rm -f "${tmpfile}"
+
+  if [ -z "${newbody}" ]; then
+    _warn "Empty body — snip not updated."
+    return 1
+  fi
+
+  _write_function "${name}" "${newbody}"
+
+  _nl
+  printf "${GREEN}✓${RESET} Snip '${BOLD}%s${RESET}' updated.\n" "${name}"
+  _reload_hint
+}
+
 cmd_list() {
   _ensure_files
 
@@ -400,6 +453,7 @@ main() {
 
   case "${cmd}" in
     add)               cmd_add "$@" ;;
+    edit)              cmd_edit "$@" ;;
     rename|mv)         cmd_rename "$@" ;;
     remove|rm)         cmd_remove "$@" ;;
     list|ls)           cmd_list ;;
