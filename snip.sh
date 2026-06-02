@@ -4,7 +4,7 @@
 #  https://github.com/armedjuror/snip
 # ─────────────────────────────────────────────
 
-SNIP_VERSION="0.0.2"
+SNIP_VERSION="0.0.3"
 SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_SHELL_FILE="${SNIP_DIR}/.shell"
@@ -120,7 +120,8 @@ cmd_help() {
   _nl
   printf "  ${BOLD}COMMANDS${RESET}\n"
   printf "    ${CYAN}add${RESET} <name>       Create a new snip (opens \$EDITOR)\n"
-  printf "    ${CYAN}remove${RESET} <name>    Delete a snip\n"
+  printf "    ${CYAN}rename${RESET} <name> <new>  Rename a snip\n"
+  printf "    ${CYAN}remove${RESET} <name>        Delete a snip\n"
   printf "    ${CYAN}list${RESET}             List all snips\n"
   printf "    ${CYAN}upgrade${RESET}          Upgrade snip to the latest version\n"
   printf "    ${CYAN}version${RESET}          Show installed version\n"
@@ -253,6 +254,44 @@ cmd_remove() {
   _reload_hint
 }
 
+cmd_rename() {
+  local name="$1"
+  local newname="$2"
+
+  if [ -z "${name}" ] || [ -z "${newname}" ]; then
+    _err "Usage: snip rename <name> <new-name>"
+    return 1
+  fi
+
+  if ! _valid_name "${newname}"; then
+    _err "Invalid name '${newname}'. Use letters, numbers, _ or - (must start with a letter or _)."
+    return 1
+  fi
+
+  _ensure_files
+
+  if ! _exists "${name}"; then
+    _err "No snip named '${name}' found."
+    return 1
+  fi
+
+  if _exists "${newname}"; then
+    _err "A snip named '${newname}' already exists. Remove it first."
+    return 1
+  fi
+
+  # Extract the body, write under new name, remove old
+  local body
+  body="$(_get_function "${name}" | tail -n +2 | awk 'NR>1{print prev} {prev=$0}')"
+
+  _write_function "${newname}" "${body}"
+  _remove_from_file "${name}"
+
+  _nl
+  printf "${GREEN}✓${RESET} Snip '${BOLD}%s${RESET}' renamed to '${BOLD}%s${RESET}'.\n" "${name}" "${newname}"
+  _reload_hint
+}
+
 cmd_list() {
   _ensure_files
 
@@ -361,6 +400,7 @@ main() {
 
   case "${cmd}" in
     add)               cmd_add "$@" ;;
+    rename|mv)         cmd_rename "$@" ;;
     remove|rm)         cmd_remove "$@" ;;
     list|ls)           cmd_list ;;
     upgrade)           cmd_upgrade ;;
