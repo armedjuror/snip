@@ -76,11 +76,16 @@ The installer:
 | Command | Alias | Description |
 |---|---|---|
 | `snip add <name>` | | Create a new snip (opens `$EDITOR`) |
-| `snip remove <name>` | `snip rm <name>` | Delete a snip |
+| `snip edit <name>` | | Edit an existing snip in place |
+| `snip rename <name> <new>` | `snip mv` | Rename a snip |
+| `snip remove <name>` | `snip rm` | Delete a snip |
 | `snip list` | `snip ls` | List all snips with their commands |
-| `snip help` | | Show help |
+| `snip export` | | Print all snips for copying to another machine |
+| `snip import` | | Import snips pasted from another machine |
+| `snip upgrade` | | Upgrade snip to the latest version |
 | `snip version` | `snip -v` | Show installed version |
 | `snip uninstall` | | Remove snip from your system |
+| `snip help` | | Show help |
 
 ---
 
@@ -173,6 +178,23 @@ echo "Deployed."
 Running `snip add <name>` on an existing snip shows the current definition and asks for confirmation before opening the editor.
 
 ---
+ 
+### Exporting and importing
+ 
+Copy your snips to another machine:
+ 
+```sh
+# On the source machine
+snip export
+# Prints all snips — copy the output
+ 
+# On the target machine
+snip import
+# Opens your editor — paste the copied output, save and quit
+# Prints each imported snip name on success
+```
+
+---
 
 ## How It Works
 
@@ -181,7 +203,7 @@ Snips are plain shell functions stored in `~/.snip/snips.<shell>`:
 ```sh
 # ~/.snip/snips.zsh
 
-pocketlog() {
+prodserver() {
   ssh -i ~/.ssh/reeld.pem ubuntu@1.2.3.4
 }
 
@@ -227,7 +249,7 @@ Contributions are welcome. `snip` is intentionally small — please keep changes
 ### Getting started
 
 ```sh
-git clone https://github.com/yourusername/snip.git
+git clone https://github.com/armedjuror/snip.git
 cd snip
 ```
 
