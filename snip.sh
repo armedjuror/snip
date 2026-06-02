@@ -4,7 +4,7 @@
 #  https://github.com/armedjuror/snip
 # ─────────────────────────────────────────────
 
-SNIP_VERSION="0.0.1"
+SNIP_VERSION="0.0.2"
 SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_SHELL_FILE="${SNIP_DIR}/.shell"
@@ -48,10 +48,12 @@ _ensure_files() {
 _editor() {
   if [ -n "${EDITOR}" ]; then
     printf "%s" "${EDITOR}"
-  elif command -v nano >/dev/null 2>&1; then
-    printf "nano"
-  else
+  elif command -v vim >/dev/null 2>&1; then
+    printf "vim"
+  elif command -v vi >/dev/null 2>&1; then
     printf "vi"
+  else
+    printf "nano"
   fi
 }
 
@@ -153,7 +155,7 @@ cmd_add() {
   # If already exists, show current definition and confirm overwrite
   if _exists "${name}"; then
     _nl
-    _warn "Snip '${BOLD}${name}${RESET}${YELLOW}' already exists:${RESET}"
+    printf "${YELLOW}!${RESET} Snip '${BOLD}%s${RESET}${YELLOW}' already exists:${RESET}\n" "${name}"
     _nl
     _get_function "${name}" | sed 's/^/    /'
     _nl
@@ -210,7 +212,7 @@ TEMPLATE
   _write_function "${name}" "${body}"
 
   _nl
-  _ok "Snip '${BOLD}${name}${RESET}' saved."
+  printf "${GREEN}✓${RESET} Snip '${BOLD}%s${RESET}' saved.\n" "${name}"
   _reload_hint
 }
 
@@ -230,7 +232,7 @@ cmd_remove() {
   fi
 
   _nl
-  _warn "About to remove snip '${BOLD}${name}${RESET}${YELLOW}':${RESET}"
+  printf "${YELLOW}!${RESET} About to remove snip '${BOLD}%s${RESET}${YELLOW}':${RESET}\n" "${name}"
   _nl
   _get_function "${name}" | sed 's/^/    /'
   _nl
@@ -272,7 +274,7 @@ cmd_list() {
   printf "%s\n" "${names}" | while IFS= read -r name; do
     [ -z "${name}" ] && continue
     printf "  ${CYAN}${BOLD}%s${RESET}\n" "${name}"
-    _get_function "${name}" | tail -n +2 | head -n -1 | sed 's/^/    /'
+    _get_function "${name}" | tail -n +2 | awk 'NR>1{print prev} {prev=$0}' | sed 's/^/    /'
     _nl
   done
 }
