@@ -1,14 +1,12 @@
 #!/bin/sh
 # ─────────────────────────────────────────────
 #  snip — shell command aliaser
-#  https://github.com/yourusername/snip
+#  https://github.com/armedjuror/snip
 # ─────────────────────────────────────────────
 
-SNIP_VERSION="0.0.1"
+SNIP_VERSION="1.0.0"
+SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
-
-# Detect which shell snip was installed for
-# Stored during install so we don't re-detect every run
 SNIP_SHELL_FILE="${SNIP_DIR}/.shell"
 
 # ── colours ───────────────────────────────────
@@ -30,14 +28,16 @@ _nl()   { printf "\n"; }
 
 # ── helpers ───────────────────────────────────
 
-_snip_file() {
+_detected_shell() {
   if [ -f "${SNIP_SHELL_FILE}" ]; then
-    shell=$(cat "${SNIP_SHELL_FILE}")
+    cat "${SNIP_SHELL_FILE}"
   else
-    # fallback: derive from $SHELL
-    shell=$(basename "${SHELL}")
+    basename "${SHELL}"
   fi
-  printf "%s" "${SNIP_DIR}/snips.${shell}"
+}
+
+_snip_file() {
+  printf "%s/snips.%s" "${SNIP_DIR}" "$(_detected_shell)"
 }
 
 _ensure_files() {
@@ -55,22 +55,18 @@ _editor() {
   fi
 }
 
-# Check if a function name exists in the snip file
 _exists() {
   grep -q "^${1}()" "$(_snip_file)" 2>/dev/null
 }
 
-# Print a named function from the snip file
 _get_function() {
   awk "/^${1}\(\)/{found=1} found{print} found && /^\}/{exit}" "$(_snip_file)" 2>/dev/null
 }
 
-# Remove a named function from the snip file
 _remove_from_file() {
   local name="$1"
-  local file
+  local file tmp
   file="$(_snip_file)"
-  local tmp
   tmp="$(mktemp)"
   awk "
     /^${name}\(\)/ { skip=1 }
@@ -79,22 +75,18 @@ _remove_from_file() {
   " "${file}" > "${tmp}" && mv "${tmp}" "${file}"
 }
 
-# Write a function to the snip file
 _write_function() {
   local name="$1"
   local body="$2"
   local file
   file="$(_snip_file)"
-
   _remove_from_file "${name}"
   printf '\n%s() {\n%s\n}\n' "${name}" "${body}" >> "${file}"
 }
 
-# Validate function name: letters/digits/_ only, must start with letter or _
 _valid_name() {
   case "$1" in
     [a-zA-Z_]*)
-      # check rest of string has only valid chars
       rest=$(printf "%s" "$1" | tr -d 'a-zA-Z0-9_-')
       [ -z "${rest}" ]
       ;;
@@ -102,9 +94,17 @@ _valid_name() {
   esac
 }
 
+# Print a prominent reload hint — child processes can't source the parent
+# shell, so we show the exact command for the user to run themselves.
 _reload_hint() {
-  shell=$(cat "${SNIP_SHELL_FILE}" 2>/dev/null || basename "${SHELL}")
-  _dim "  Reload your shell:  source ~/.${shell}rc  or open a new tab."
+  local shell rc
+  shell="$(_detected_shell)"
+  rc="${HOME}/.${shell}rc"
+  _nl
+  printf "  ${DIM}To apply, run:${RESET}\n"
+  _nl
+  printf "  ${BOLD}  source %s${RESET}\n" "${rc}"
+  _nl
 }
 
 # ── commands ──────────────────────────────────
@@ -120,16 +120,14 @@ cmd_help() {
   printf "    ${CYAN}add${RESET} <name>       Create a new snip (opens \$EDITOR)\n"
   printf "    ${CYAN}remove${RESET} <name>    Delete a snip\n"
   printf "    ${CYAN}list${RESET}             List all snips\n"
-  printf "    ${CYAN}help${RESET}             Show this help\n"
-  printf "    ${CYAN}version${RESET}          Show version\n"
+  printf "    ${CYAN}upgrade${RESET}          Upgrade snip to the latest version\n"
+  printf "    ${CYAN}version${RESET}          Show installed version\n"
   printf "    ${CYAN}uninstall${RESET}        Remove snip from your system\n"
+  printf "    ${CYAN}help${RESET}             Show this help\n"
   _nl
   printf "  ${BOLD}ARGUMENT TIPS${RESET}\n"
-  _dim "    \$1, \$2 …  positional args        pip install \$1 && pip freeze > requirements.txt"
-  _dim "    \"\$@\"       forward all args       git pull \"\$@\""
-  _nl
-  printf "  ${BOLD}RELOAD${RESET}\n"
-  _dim "    After adding/removing snips, reload your shell or open a new tab."
+  _dim "    \$1, \$2 …  positional args  →  pip install \$1 && pip freeze > requirements.txt"
+  _dim "    \"\$@\"       forward all args →  git pull \"\$@\""
   _nl
 }
 
@@ -152,7 +150,7 @@ cmd_add() {
 
   _ensure_files
 
-  # Check if already exists
+  # If already exists, show current definition and confirm overwrite
   if _exists "${name}"; then
     _nl
     _warn "Snip '${BOLD}${name}${RESET}${YELLOW}' already exists:${RESET}"
@@ -181,7 +179,6 @@ cmd_add() {
   _dim "  Your \$EDITOR will open. Save and quit to confirm."
   _nl
 
-  # Temp file with helpful comment header
   local tmpfile
   tmpfile="$(mktemp /tmp/snip_XXXXXX.sh)"
 
@@ -215,7 +212,6 @@ TEMPLATE
   _nl
   _ok "Snip '${BOLD}${name}${RESET}' saved."
   _reload_hint
-  _nl
 }
 
 cmd_remove() {
@@ -253,17 +249,14 @@ cmd_remove() {
   _nl
   _ok "Snip '${name}' removed."
   _reload_hint
-  _nl
 }
 
 cmd_list() {
   _ensure_files
 
-  local file
+  local file names
   file="$(_snip_file)"
-
-  local names
-  names=$(grep '^[a-zA-Z_][a-zA-Z0-9_-]*()'  "${file}" 2>/dev/null | sed 's/().*//')
+  names=$(grep '^[a-zA-Z_][a-zA-Z0-9_-]*()' "${file}" 2>/dev/null | sed 's/().*//')
 
   if [ -z "${names}" ]; then
     _nl
@@ -279,17 +272,57 @@ cmd_list() {
   printf "%s\n" "${names}" | while IFS= read -r name; do
     [ -z "${name}" ] && continue
     printf "  ${CYAN}${BOLD}%s${RESET}\n" "${name}"
-    # Print body only (strip first and last line of function wrapper)
     _get_function "${name}" | tail -n +2 | head -n -1 | sed 's/^/    /'
     _nl
   done
+}
+
+cmd_upgrade() {
+  _nl
+  _info "Upgrading snip..."
+  _nl
+
+  local old_version tmp
+  old_version="${SNIP_VERSION}"
+  tmp="$(mktemp)"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "${SNIP_REPO}/snip.sh" -o "${tmp}"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "${tmp}" "${SNIP_REPO}/snip.sh"
+  else
+    rm -f "${tmp}"
+    _err "Neither curl nor wget found. Cannot upgrade."
+    return 1
+  fi
+
+  # Sanity check — make sure we got a valid snip script
+  if ! grep -q 'SNIP_VERSION=' "${tmp}" 2>/dev/null; then
+    rm -f "${tmp}"
+    _err "Downloaded file looks invalid. Upgrade aborted — your current install is unchanged."
+    return 1
+  fi
+
+  # Extract new version from downloaded file
+  local new_version
+  new_version=$(grep '^SNIP_VERSION=' "${tmp}" | head -1 | sed 's/SNIP_VERSION="//;s/"//')
+
+  chmod +x "${tmp}"
+  mv "${tmp}" "${SNIP_DIR}/snip.sh"
+
+  if [ "${old_version}" = "${new_version}" ]; then
+    _ok "Already up to date (v${new_version})."
+  else
+    _ok "Upgraded v${old_version} → v${new_version}"
+  fi
+  _nl
 }
 
 cmd_uninstall() {
   _nl
   _warn "This will:"
   printf "    • Remove %s\n" "${SNIP_DIR}"
-  printf "    • Remove the snip source line from your rc file\n"
+  printf "    • Remove the snip lines from your rc file\n"
   _nl
   printf "  Are you sure? [y/N] "
   read -r confirm
@@ -301,12 +334,11 @@ cmd_uninstall() {
       ;;
   esac
 
-  local shell
-  shell=$(cat "${SNIP_SHELL_FILE}" 2>/dev/null || basename "${SHELL}")
-  local rc="${HOME}/.${shell}rc"
+  local shell rc tmp
+  shell="$(_detected_shell)"
+  rc="${HOME}/.${shell}rc"
 
   if [ -f "${rc}" ]; then
-    local tmp
     tmp="$(mktemp)"
     grep -v '# snip managed' "${rc}" > "${tmp}" && mv "${tmp}" "${rc}"
     _ok "Cleaned ${rc}"
@@ -315,7 +347,7 @@ cmd_uninstall() {
   rm -rf "${SNIP_DIR}"
   _ok "Removed ${SNIP_DIR}"
   _nl
-  _bold "  snip uninstalled. Reload your shell."
+  _bold "  snip uninstalled. Open a new terminal to clear the session."
   _nl
 }
 
@@ -326,11 +358,12 @@ main() {
   shift 2>/dev/null || true
 
   case "${cmd}" in
-    add)              cmd_add "$@" ;;
-    remove|rm)        cmd_remove "$@" ;;
-    list|ls)          cmd_list ;;
-    version|-v)       cmd_version ;;
-    uninstall)        cmd_uninstall ;;
+    add)               cmd_add "$@" ;;
+    remove|rm)         cmd_remove "$@" ;;
+    list|ls)           cmd_list ;;
+    upgrade)           cmd_upgrade ;;
+    version|-v)        cmd_version ;;
+    uninstall)         cmd_uninstall ;;
     help|-h|--help|"") cmd_help ;;
     *)
       _err "Unknown command '${cmd}'. Run 'snip help' for usage."
