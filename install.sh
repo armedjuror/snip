@@ -56,7 +56,7 @@ detect_shell() {
 # ── steps ─────────────────────────────────────
 
 step_download() {
-  _info "Downloading snip v${SNIP_VERSION}..."
+  _info "Downloading snip..."
   mkdir -p "${SNIP_DIR}"
 
   if command -v curl >/dev/null 2>&1; then
@@ -134,7 +134,6 @@ step_add_to_path
 step_wire_rc "${SNIP_SHELL}"
 
 _nl
-local installed_version
 installed_version=$(grep '^SNIP_VERSION=' "${SNIP_BIN}" | head -1 | sed 's/SNIP_VERSION="//;s/"//')
 _bold "  ✓ snip v${installed_version} installed!"
 _nl
