@@ -10,7 +10,7 @@
 
 ```sh
 # Before
-ssh -i ~/.ssh/key.pem ubuntu@3.192.168.1
+ssh -i ~/.ssh/key.pem ubuntu@1.2.3.4
 
 # After
 prodserver
@@ -95,14 +95,14 @@ snip add prodserver
 Your `$EDITOR` opens with a template. Write the command:
 
 ```sh
-ssh -i ~/.ssh/key.pem ubuntu@3.192.168.5
+ssh -i ~/.ssh/key.pem ubuntu@1.2.3.4
 ```
 
-Save and quit. Now `pocketlog` is available in your shell.
+Save and quit. Now `prodserver` is available in your shell.
 
 ```sh
 pocketlog
-# → ssh -i ~/.ssh/reeld.pem ubuntu@3.110.114.90
+# → ssh -i ~/.ssh/key.pem ubuntu@1.2.3.4
 ```
 
 ---
@@ -181,8 +181,8 @@ Snips are plain shell functions stored in `~/.snip/snips.<shell>`:
 ```sh
 # ~/.snip/snips.zsh
 
-prodserver() {
-  ssh -i ~/.ssh/key.pem ubuntu@3.19.168.8
+pocketlog() {
+  ssh -i ~/.ssh/reeld.pem ubuntu@1.2.3.4
 }
 
 pi() {
