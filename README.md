@@ -258,4 +258,4 @@ Please include:
 
 MIT License — see [LICENSE](LICENSE) for full text.
 
-Copyright (c) 2025 yourusername
+Copyright (c) 2025 armedjuror
