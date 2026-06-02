@@ -1,13 +1,13 @@
 #!/bin/sh
 # ─────────────────────────────────────────────
 #  snip installer — POSIX sh
-#  curl -fsSL https://raw.githubusercontent.com/yourusername/snip/main/install.sh | bash
+#  curl -fsSL https://raw.githubusercontent.com/armedjuror/snip/main/install.sh | bash
 # ─────────────────────────────────────────────
 
 set -e
 
 SNIP_VERSION="1.0.0"
-SNIP_REPO="https://raw.githubusercontent.com/yourusername/snip/main"
+SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_BIN="${SNIP_DIR}/snip.sh"
 SNIP_SHELL_FILE="${SNIP_DIR}/.shell"
