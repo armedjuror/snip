@@ -6,7 +6,7 @@
 
 set -e
 
-SNIP_VERSION="0.0.3"
+SNIP_VERSION="0.0.4"
 SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_BIN="${SNIP_DIR}/snip.sh"
