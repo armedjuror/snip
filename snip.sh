@@ -4,7 +4,7 @@
 #  https://github.com/armedjuror/snip
 # ─────────────────────────────────────────────
 
-SNIP_VERSION="1.0.0"
+SNIP_VERSION="0.0.1"
 SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_SHELL_FILE="${SNIP_DIR}/.shell"
