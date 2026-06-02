@@ -4,7 +4,7 @@
 #  https://github.com/armedjuror/snip
 # ─────────────────────────────────────────────
 
-SNIP_VERSION="0.0.4"
+SNIP_VERSION="0.0.5"
 SNIP_REPO="https://raw.githubusercontent.com/armedjuror/snip/main"
 SNIP_DIR="${HOME}/.snip"
 SNIP_SHELL_FILE="${SNIP_DIR}/.shell"
@@ -124,6 +124,8 @@ cmd_help() {
   printf "    ${CYAN}rename${RESET} <name> <new>   Rename a snip\n"
   printf "    ${CYAN}remove${RESET} <name>         Delete a snip\n"
   printf "    ${CYAN}list${RESET}             List all snips\n"
+  printf "    ${CYAN}export${RESET}           Print all snips for copying\n"
+  printf "    ${CYAN}import${RESET}           Import snips from another machine\n"
   printf "    ${CYAN}upgrade${RESET}          Upgrade snip to the latest version\n"
   printf "    ${CYAN}version${RESET}          Show installed version\n"
   printf "    ${CYAN}uninstall${RESET}        Remove snip from your system\n"
@@ -345,6 +347,105 @@ TEMPLATE
   _reload_hint
 }
 
+cmd_export() {
+  _ensure_files
+
+  local file
+  file="$(_snip_file)"
+
+  # Check there's anything to export
+  local names
+  names=$(grep '^[a-zA-Z_][a-zA-Z0-9_-]*()' "${file}" 2>/dev/null | sed 's/().*//')
+
+  if [ -z "${names}" ]; then
+    _nl
+    _dim "  No snips to export."
+    _nl
+    return 0
+  fi
+
+  _nl
+  _bold "  Exporting snips from ${file}"
+  _nl
+  _dim "  Copy everything below the line and save it somewhere safe."
+  _dim "  To import on another machine:  snip import"
+  printf "  ${DIM}%s${RESET}\n" "────────────────────────────────────────"
+  _nl
+  cat "${file}"
+  _nl
+  printf "  ${DIM}%s${RESET}\n" "────────────────────────────────────────"
+  _nl
+}
+
+cmd_import() {
+  _ensure_files
+
+  local file
+  file="$(_snip_file)"
+
+  _nl
+  _bold "  Importing snips"
+  _nl
+  _dim "  Paste your exported snips file content into the editor."
+  _dim "  Existing snips with the same name will be overwritten."
+  _dim "  Save and quit to confirm."
+  _nl
+
+  local tmpfile
+  tmpfile="$(mktemp /tmp/snip_XXXXXX.sh)"
+
+  cat > "${tmpfile}" <<TEMPLATE
+# Paste your exported snip functions below.
+# Lines starting with # are ignored.
+# Format: each snip is a shell function like:
+#
+#   gp() {
+#     git pull "\$@"
+#   }
+#
+TEMPLATE
+
+  local editor
+  editor="$(_editor)"
+  "${editor}" "${tmpfile}"
+
+  # Strip comment lines and blank lines, keep function definitions
+  local content
+  content="$(grep -v '^\s*#' "${tmpfile}" | sed '/^[[:space:]]*$/d')"
+  rm -f "${tmpfile}"
+
+  if [ -z "${content}" ]; then
+    _warn "Nothing pasted — import aborted."
+    return 1
+  fi
+
+  # Parse out function names from the pasted content
+  local imported_names
+  imported_names=$(printf "%s\n" "${content}" | grep '^[a-zA-Z_][a-zA-Z0-9_-]*()' | sed 's/().*//')
+
+  if [ -z "${imported_names}" ]; then
+    _warn "No valid snip functions found in pasted content."
+    _dim "  Expected format:  name() { ... }"
+    return 1
+  fi
+
+  # For each function found, extract and write it
+  local count name body
+  count=0
+
+  printf "%s\n" "${imported_names}" | while IFS= read -r name; do
+    [ -z "${name}" ] && continue
+    # Extract this function's body from the pasted content
+    body=$(printf "%s\n" "${content}" | awk "/^${name}\(\)/{found=1} found{print} found && /^\}/{exit}" | tail -n +2 | awk 'NR>1{print prev} {prev=$0}')
+    _write_function "${name}" "${body}"
+    _ok "Imported: ${name}"
+    count=$((count + 1))
+  done
+
+  _nl
+  _reload_hint
+}
+
 cmd_list() {
   _ensure_files
 
@@ -457,6 +558,8 @@ main() {
     rename|mv)         cmd_rename "$@" ;;
     remove|rm)         cmd_remove "$@" ;;
     list|ls)           cmd_list ;;
+    export)            cmd_export ;;
+    import)            cmd_import ;;
     upgrade)           cmd_upgrade ;;
     version|-v)        cmd_version ;;
     uninstall)         cmd_uninstall ;;
