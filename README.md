@@ -47,7 +47,7 @@ prodserver
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/yourusername/snip/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/armedjuror/snip/main/install.sh | bash
 ```
 
 Then reload your shell:
