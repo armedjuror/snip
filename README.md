@@ -106,7 +106,7 @@ ssh -i ~/.ssh/key.pem ubuntu@1.2.3.4
 Save and quit. Now `prodserver` is available in your shell.
 
 ```sh
-pocketlog
+prodserver
 # → ssh -i ~/.ssh/key.pem ubuntu@1.2.3.4
 ```
 
@@ -204,7 +204,7 @@ Snips are plain shell functions stored in `~/.snip/snips.<shell>`:
 # ~/.snip/snips.zsh
 
 prodserver() {
-  ssh -i ~/.ssh/reeld.pem ubuntu@1.2.3.4
+  ssh -i ~/.ssh/key.pem ubuntu@1.2.3.4
 }
 
 pi() {
